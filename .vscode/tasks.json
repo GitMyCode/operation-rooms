@@ -44,6 +44,24 @@
             "problemMatcher": "$msCompile"
         },
         {
+            "label": "publish small win",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "publish",
+                "${workspaceFolder}/operation-rooms.csproj",
+                "-r",
+                "win-x64",
+                "-c",
+                "release",
+                "/p:PublishSingleFile=true",
+                "/p:PublishTrimmed=true",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
             "label": "watch",
             "command": "dotnet",
             "type": "process",
