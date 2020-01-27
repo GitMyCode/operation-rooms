@@ -143,7 +143,7 @@ namespace med_room
 
         private static List<Operation> GetOperations(FileInfo fileInfo)
         {
-            var workbook = ExcelFile.Load(fileInfo.FullName);
+            //var workbook = ExcelFile.Load(fileInfo.FullName);
 
             using (var package = new ExcelPackage(fileInfo))
             {
