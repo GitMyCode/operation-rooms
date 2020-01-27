@@ -6,11 +6,19 @@ using System.Text;
 using System.Text.Json;
 using OfficeOpenXml;
 using System.Data;
-using GemBox.Spreadsheet;
 using System.Globalization;
 
 namespace med_room
 {
+    public static class Headers{
+        public static class TimeSlot {
+            public const string Week = "Week";
+
+            public const string NbPlages = "Nb_plages";
+
+            public const string NbOperationLimit = "NbOperationLimit";
+        }
+    }
     public class Program
     {
         public const int TimeSlotDefault = 800;
@@ -62,7 +70,6 @@ namespace med_room
         {
             var readFilePath = string.Empty;
             var writeFilePath = string.Empty;
-            SpreadsheetInfo.SetLicense("FREE-LIMITED-KEY");
 #if DEBUG
             readFilePath = "OperationTimeSlot.ods";
 #else
@@ -78,70 +85,70 @@ namespace med_room
             var data = new ExcelReader().ReadOdsFile(fileInfo.FullName);
             var table1 = data.Tables[0];
             Console.WriteLine($"nb line {table1.Rows.Count}");
-            var header = table1.Rows[0].ItemArray.Select(x => x);
+            var header = ExcelHelper.GetExcelHeader(table1, 0);
             table1.Rows.RemoveAt(0);
             var rowsEnumerator = table1.Rows.GetEnumerator();
-            while(rowsEnumerator.MoveNext()){
-                var curRow = (DataRow)rowsEnumerator.Current;
-                Console.WriteLine(string.Join(',', (curRow.ItemArray.Select(x => x))));
+            for(var i =1 ; i< table1.Rows.Count; i++){
+                Console.WriteLine($"{table1.Rows[i][header[Headers.TimeSlot.Week]]}, {table1.Rows[i][header[Headers.TimeSlot.NbPlages]]}, {table1.Rows[i][header[Headers.TimeSlot.NbOperationLimit]]}");
             }
-       
+           
+
             //var operationList = GetOperations(fileInfo);
-//             var weekList = GetWeeks(fileInfo);
+            //             var weekList = GetWeeks(fileInfo);
 
-//             var solver = new RoomSolver();
-//             var allFittedOperations = new List<OperationResult>();
-//             foreach (var week in weekList)
-//             {
-//                 var subset = operationList
-//                     .Where(x => x.SemaineDispo <= week.Number)
-//                     .Where(x => allFittedOperations.All(y => y.Id != x.Id))
-//                     .OrderByDescending(x => x.ScoreOp)
-//                     .ThenBy(x => x.Duree).ToList();
+            //             var solver = new RoomSolver();
+            //             var allFittedOperations = new List<OperationResult>();
+            //             foreach (var week in weekList)
+            //             {
+            //                 var subset = operationList
+            //                     .Where(x => x.SemaineDispo <= week.Number)
+            //                     .Where(x => allFittedOperations.All(y => y.Id != x.Id))
+            //                     .OrderByDescending(x => x.ScoreOp)
+            //                     .ThenBy(x => x.Duree).ToList();
 
-//                 var weekSelectedOperations = solver.Solve(week, subset);
-//                 Console.WriteLine($"-------------------------WEEK {week.Number}-------------------------------");
-//                 foreach (var selectedOperation in weekSelectedOperations)
-//                 {
-//                     Console.WriteLine(
-//                         $"Id: {selectedOperation.Id} "
-//                         + $"\t Score_op: {selectedOperation.ScoreOp} "
-//                         + $"\t Durée: {selectedOperation.Duree} "
-//                         + $"\t Limite_VAR: {selectedOperation.LimitVar}");
-//                 }
+            //                 var weekSelectedOperations = solver.Solve(week, subset);
+            //                 Console.WriteLine($"-------------------------WEEK {week.Number}-------------------------------");
+            //                 foreach (var selectedOperation in weekSelectedOperations)
+            //                 {
+            //                     Console.WriteLine(
+            //                         $"Id: {selectedOperation.Id} "
+            //                         + $"\t Score_op: {selectedOperation.ScoreOp} "
+            //                         + $"\t Durée: {selectedOperation.Duree} "
+            //                         + $"\t Limite_VAR: {selectedOperation.LimitVar}");
+            //                 }
 
-//                 Console.WriteLine(
-//                     $"Nb fitted operation: {weekSelectedOperations.Count} "
-//                     + $"\t Total hours: {(decimal)weekSelectedOperations.Sum(x => x.Duree) / 100}"
-//                     + $"\t Total ScoreOp: {weekSelectedOperations.Sum(x => x.ScoreOp)}");
+            //                 Console.WriteLine(
+            //                     $"Nb fitted operation: {weekSelectedOperations.Count} "
+            //                     + $"\t Total hours: {(decimal)weekSelectedOperations.Sum(x => x.Duree) / 100}"
+            //                     + $"\t Total ScoreOp: {weekSelectedOperations.Sum(x => x.ScoreOp)}");
 
-//                 allFittedOperations.AddRange(weekSelectedOperations);
-//             }
+            //                 allFittedOperations.AddRange(weekSelectedOperations);
+            //             }
 
-//             Console.WriteLine($"--------------------------------------------------------");
-//             Console.WriteLine($"--------------------------------------------------------");
-//             Console.WriteLine($"------------------------END-----------------------------");
-//             Console.WriteLine($"--------------------------------------------------------");
-//             Console.WriteLine($"--------------------------------------------------------");
-//             Console.WriteLine(
-//                 $"Nb fitted operation: {allFittedOperations.Count} "
-//                 + $"\t Total hours: {(decimal)allFittedOperations.Sum(x => x.Duree) / 100}"
-//                 + $"\t Total ScoreOp: {allFittedOperations.Sum(x => x.ScoreOp)}");
+            //             Console.WriteLine($"--------------------------------------------------------");
+            //             Console.WriteLine($"--------------------------------------------------------");
+            //             Console.WriteLine($"------------------------END-----------------------------");
+            //             Console.WriteLine($"--------------------------------------------------------");
+            //             Console.WriteLine($"--------------------------------------------------------");
+            //             Console.WriteLine(
+            //                 $"Nb fitted operation: {allFittedOperations.Count} "
+            //                 + $"\t Total hours: {(decimal)allFittedOperations.Sum(x => x.Duree) / 100}"
+            //                 + $"\t Total ScoreOp: {allFittedOperations.Sum(x => x.ScoreOp)}");
 
-// #if !DEBUG
-//             SaveResults(new FileInfo(writeFilePath), allFittedOperations);
-// #endif
-//             Console.Read();
+            // #if !DEBUG
+            //             SaveResults(new FileInfo(writeFilePath), allFittedOperations);
+            // #endif
+            //             Console.Read();
         }
 
         private static List<Operation> GetOperations(FileInfo fileInfo)
         {
-                var workbook = ExcelFile.Load(fileInfo.FullName);
+            var workbook = ExcelFile.Load(fileInfo.FullName);
 
             using (var package = new ExcelPackage(fileInfo))
             {
                 var operationWorksheet = package.Workbook.Worksheets["Operation"];
-               // var header = ExcelHelper.GetExcelHeader(operationWorksheet, 1);
+                // var header = ExcelHelper.GetExcelHeader(operationWorksheet, 1);
 
                 var list = new List<Operation>();
                 // for (var i = 2; i <= operationWorksheet.Dimension.Rows; i++)
@@ -174,7 +181,7 @@ namespace med_room
         //         for (var i = 2; i <= timeslotWorksheet.Dimension.Rows; i++)
         //         {
         //             var nbSlot = timeslotWorksheet.Cells[i, header["Nb_plages"]].GetValue<int>();
-                    
+
         //             // if there is no header for timelimit for a week then provie de default timeslot value
         //             var availableTimeForWeek = header.ContainsKey("TimeLimit") ? timeslotWorksheet.Cells[i, header["TimeLimit"]].GetValue<int?>()?? TimeSlotDefault * nbSlot : TimeSlotDefault * nbSlot; 
 
@@ -301,3 +308,25 @@ namespace med_room
 
 //         return header;
 //     }
+
+public static class ExcelHelper
+{
+    public static Dictionary<string, int> GetExcelHeader(DataTable workSheet, int rowIndex)
+    {
+        var header = new Dictionary<string, int>();
+        if (workSheet != null)
+        {
+            var headerRow = workSheet.Rows[rowIndex];
+            for (var columnIndex = 0; columnIndex < headerRow.ItemArray.Count(); columnIndex++)
+            {
+                var columnName = headerRow[columnIndex].ToString();
+                if (!string.IsNullOrEmpty(columnName))
+                {
+                    header.Add(columnName, columnIndex);
+                }
+            }
+        }
+
+        return header;
+    }
+}

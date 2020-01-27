@@ -101,85 +101,100 @@ public class ExcelReader
     }
 
     // In ODF sheet is stored in table:table node
-        private XmlNodeList GetTableNodes(XmlDocument contentXmlDocument, XmlNamespaceManager nmsManager)
+    private XmlNodeList GetTableNodes(XmlDocument contentXmlDocument, XmlNamespaceManager nmsManager)
+    {
+        return contentXmlDocument.SelectNodes("/office:document-content/office:body/office:spreadsheet/table:table", nmsManager);
+    }
+
+    private DataTable GetSheet(XmlNode tableNode, XmlNamespaceManager nmsManager)
+    {
+        DataTable sheet = new DataTable(tableNode.Attributes["table:name"].Value);
+
+        XmlNodeList rowNodes = tableNode.SelectNodes("table:table-row", nmsManager);
+
+        int rowIndex = 0;
+        foreach (XmlNode rowNode in rowNodes)
+            this.GetRow(rowNode, sheet, nmsManager, ref rowIndex);
+
+        return sheet;
+    }
+
+    private void GetRow(XmlNode rowNode, DataTable sheet, XmlNamespaceManager nmsManager, ref int rowIndex)
+    {
+        XmlAttribute rowsRepeated = rowNode.Attributes["table:number-rows-repeated"];
+        if (rowsRepeated == null || Convert.ToInt32(rowsRepeated.Value, CultureInfo.InvariantCulture) == 1)
         {
-            return contentXmlDocument.SelectNodes("/office:document-content/office:body/office:spreadsheet/table:table", nmsManager);
+            // while (sheet.Rows.Count < rowIndex)
+            //     sheet.Rows.Add(sheet.NewRow());
+
+            DataRow row = sheet.NewRow();
+
+            XmlNodeList cellNodes = rowNode.SelectNodes("table:table-cell", nmsManager);
+
+            int cellIndex = 0;
+            foreach (XmlNode cellNode in cellNodes)
+                this.GetCell(cellNode, row, nmsManager, ref cellIndex);
+
+            sheet.Rows.Add(row);
+
+            rowIndex++;
+        }
+        else
+        {
+            rowIndex += Convert.ToInt32(rowsRepeated.Value, CultureInfo.InvariantCulture);
         }
 
-        private DataTable GetSheet(XmlNode tableNode, XmlNamespaceManager nmsManager)
+        // sheet must have at least one cell
+        if (sheet.Rows.Count == 0)
         {
-            DataTable sheet = new DataTable(tableNode.Attributes["table:name"].Value);
-
-            XmlNodeList rowNodes = tableNode.SelectNodes("table:table-row", nmsManager);
-
-            int rowIndex = 0;
-            foreach (XmlNode rowNode in rowNodes)
-                this.GetRow(rowNode, sheet, nmsManager, ref rowIndex);
-
-            return sheet;
+            sheet.Rows.Add(sheet.NewRow());
+            sheet.Columns.Add();
         }
+    }
 
-        private void GetRow(XmlNode rowNode, DataTable sheet, XmlNamespaceManager nmsManager, ref int rowIndex)
+    private void GetCell(XmlNode cellNode, DataRow row, XmlNamespaceManager nmsManager, ref int cellIndex)
+    {
+        XmlAttribute cellRepeated = cellNode.Attributes["table:number-columns-repeated"];
+
+        if (cellRepeated == null)
         {
-            XmlAttribute rowsRepeated = rowNode.Attributes["table:number-rows-repeated"];
-            if (rowsRepeated == null || Convert.ToInt32(rowsRepeated.Value, CultureInfo.InvariantCulture) == 1)
-            {
-                // while (sheet.Rows.Count < rowIndex)
-                //     sheet.Rows.Add(sheet.NewRow());
+            DataTable sheet = row.Table;
 
-                DataRow row = sheet.NewRow();
-
-                XmlNodeList cellNodes = rowNode.SelectNodes("table:table-cell", nmsManager);
-
-                int cellIndex = 0;
-                foreach (XmlNode cellNode in cellNodes)
-                    this.GetCell(cellNode, row, nmsManager, ref cellIndex);
-
-                sheet.Rows.Add(row);
-
-                rowIndex++;
-            }
-            else
-            {
-                rowIndex += Convert.ToInt32(rowsRepeated.Value, CultureInfo.InvariantCulture);
-            }
-
-            // sheet must have at least one cell
-            if (sheet.Rows.Count == 0)
-            {
-                sheet.Rows.Add(sheet.NewRow());
+            while (sheet.Columns.Count <= cellIndex)
                 sheet.Columns.Add();
-            }
+
+            row[cellIndex] = this.ReadCellValue(cellNode);
+
+            cellIndex++;
         }
-
-        private void GetCell(XmlNode cellNode, DataRow row, XmlNamespaceManager nmsManager, ref int cellIndex)
+        else
         {
-            XmlAttribute cellRepeated = cellNode.Attributes["table:number-columns-repeated"];
+            //cellIndex += Convert.ToInt32(cellRepeated.Value, CultureInfo.InvariantCulture);
+            var repeatedCount = Convert.ToInt32(cellRepeated.Value, CultureInfo.InvariantCulture);
 
-            if (cellRepeated == null)
+            DataTable sheet = row.Table;
+            var cellValue = this.ReadCellValue(cellNode);
+            if (cellValue != null)
             {
-                DataTable sheet = row.Table;
-
-                while (sheet.Columns.Count <= cellIndex)
+                for (var i = cellIndex; i < (cellIndex + repeatedCount); i++)
+                {
                     sheet.Columns.Add();
-
-                row[cellIndex] = this.ReadCellValue(cellNode);
-
-                cellIndex++;
+                    row[i] = cellValue;
+                }
             }
-            else
-            {
-                cellIndex += Convert.ToInt32(cellRepeated.Value, CultureInfo.InvariantCulture);
-            }
-        }
 
-        private string ReadCellValue(XmlNode cell)
-        {
-            XmlAttribute cellVal = cell.Attributes["office:value"];
 
-            if (cellVal == null)
-                return String.IsNullOrEmpty(cell.InnerText) ? null : cell.InnerText;
-            else
-                return cellVal.Value;
+            cellIndex += repeatedCount;
         }
+    }
+
+    private string ReadCellValue(XmlNode cell)
+    {
+        XmlAttribute cellVal = cell.Attributes["office:value"];
+
+        if (cellVal == null)
+            return String.IsNullOrEmpty(cell.InnerText) ? null : cell.InnerText;
+        else
+            return cellVal.Value;
+    }
 }
