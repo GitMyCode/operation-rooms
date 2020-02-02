@@ -22,6 +22,15 @@ namespace med_room
 
             public const string WeekTimeLimit = "WeekTimeLimit";
         }
+
+        public static class Opp
+        {
+            public const string ID_instance = "ID_instance";
+            public const string Limite_VAR = "Limite_VAR";
+            public const string Score_op = "Score_op";
+            public const string Sem_dispo_ajus = "Sem_dispo_ajus";
+            public const string Duree_salle_aj_inter = "Duree_salle_aj_inter";
+        }
     }
     public class Program
     {
@@ -96,6 +105,11 @@ namespace med_room
                 Console.WriteLine(week.ToString());
             }
 
+            Console.WriteLine("------Operation------");
+            foreach(var opp in operationList){
+                Console.WriteLine(opp.ToString());
+            }
+
             //             var solver = new RoomSolver();
             //             var allFittedOperations = new List<OperationResult>();
             //             foreach (var week in weekList)
@@ -143,29 +157,32 @@ namespace med_room
 
         private static List<Operation> GetOperations(FileInfo fileInfo)
         {
-            //var workbook = ExcelFile.Load(fileInfo.FullName);
+            var operations = new List<Operation>();
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            var data = new ExcelReader().ReadOdsFile(fileInfo.FullName);
+            var operationTable = data.Tables[1];
+            var header = ExcelHelper.GetExcelHeader(operationTable, 0);
+            operationTable.Rows.RemoveAt(0);
 
-            using (var package = new ExcelPackage(fileInfo))
+            foreach (DataRow operationDataRow in operationTable.Rows)
             {
-                var operationWorksheet = package.Workbook.Worksheets["Operation"];
-                // var header = ExcelHelper.GetExcelHeader(operationWorksheet, 1);
+                var id = operationDataRow.GetCell<int>(() => header[Headers.Opp.ID_instance]);
+                var limitVar = operationDataRow.GetCell<string>(() => header[Headers.Opp.Limite_VAR]);
+                var scoreOp = operationDataRow.GetCell<decimal>(() => header[Headers.Opp.Score_op]);
+                var semaineDispo = operationDataRow.GetCell<int>(() => header[Headers.Opp.Sem_dispo_ajus]);
+                var duree = (int) (operationDataRow.GetCell<decimal>(() => header[Headers.Opp.Duree_salle_aj_inter]) * 100);
 
-                var list = new List<Operation>();
-                // for (var i = 2; i <= operationWorksheet.Dimension.Rows; i++)
-                // {
-                //     list.Add(
-                //         new Operation
-                //         {
-                //             Id = operationWorksheet.Cells[i, header["ID_instance"]].GetValue<int>(),
-                //             LimitVar = operationWorksheet.Cells[i, header["Limite_VAR"]].GetValue<string>(),
-                //             ScoreOp = operationWorksheet.Cells[i, header["Score_op"]].GetValue<decimal>(),
-                //             SemaineDispo = operationWorksheet.Cells[i, header["Sem_dispo_ajus"]].GetValue<int>(),
-                //             Duree = (int)(100 * operationWorksheet.Cells[i, header["Duree_salle_aj_inter"]].GetValue<decimal>()),
-                //         });
-                // }
-
-                return list;
+                operations.Add(new Operation()
+                {
+                    Id = id,
+                    LimitVar = limitVar,
+                    ScoreOp = scoreOp,
+                    SemaineDispo = semaineDispo,
+                    Duree = duree
+                });
             }
+
+            return operations;
         }
 
         private static List<Week> GetWeeks(FileInfo fileInfo)
@@ -173,15 +190,15 @@ namespace med_room
             var weeks = new List<Week>();
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             var data = new ExcelReader().ReadOdsFile(fileInfo.FullName);
-            var table1 = data.Tables[0];
+            var weekTable = data.Tables[0];
 
-            Console.WriteLine($"nb line {table1.Rows.Count}");
-            var header = ExcelHelper.GetExcelHeader(table1, 0);
-            table1.Rows.RemoveAt(0);
-            var rowsEnumerator = table1.Rows.GetEnumerator();
-            for (var i = 0; i < table1.Rows.Count; i++)
+            Console.WriteLine($"nb line {weekTable.Rows.Count}");
+            var header = ExcelHelper.GetExcelHeader(weekTable, 0);
+            weekTable.Rows.RemoveAt(0);
+            var rowsEnumerator = weekTable.Rows.GetEnumerator();
+            for (var i = 0; i < weekTable.Rows.Count; i++)
             {
-                var cell = table1.Rows[i];
+                var cell = weekTable.Rows[i];
                 var weekNumber = cell.GetCell<int>(() => header[Headers.TimeSlot.Week]);
                 var nbOperationLimit = cell.GetCell<int>(() => header[Headers.TimeSlot.NbOperationLimit], NbOperationLimitDefault);
                 var nbPlages = cell.GetCell<int>(() => header[Headers.TimeSlot.NbPlages]);
@@ -273,6 +290,10 @@ namespace med_room
         public int SemaineDispo { get; set; }
 
         public int Duree { get; set; }
+
+        public override string ToString(){
+            return $"{nameof(Id)}:{this.Id}, {nameof(LimitVar)}:{this.LimitVar}, {nameof(ScoreOp)}:{this.ScoreOp}, {nameof(SemaineDispo)}:{this.SemaineDispo}, {nameof(Duree)}:{this.Duree}";
+        }
     }
 
     public class OperationResult
