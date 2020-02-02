@@ -71,7 +71,7 @@ namespace med_room
             var readFilePath = string.Empty;
             var writeFilePath = string.Empty;
 #if DEBUG
-            readFilePath = "OperationTimeSlot.ods";
+            readFilePath = "OperationTimeSlot2.ods";
 #else
             Console.WriteLine(@"Path du fichier a lire (ex: C:\Users\blabla\Desktop\Test.xlsx)");
             readFilePath = Console.ReadLine();
@@ -88,7 +88,7 @@ namespace med_room
             var header = ExcelHelper.GetExcelHeader(table1, 0);
             table1.Rows.RemoveAt(0);
             var rowsEnumerator = table1.Rows.GetEnumerator();
-            for(var i =1 ; i< table1.Rows.Count; i++){
+            for(var i =0 ; i< table1.Rows.Count; i++){
                 Console.WriteLine($"{table1.Rows[i][header[Headers.TimeSlot.Week]]}, {table1.Rows[i][header[Headers.TimeSlot.NbPlages]]}, {table1.Rows[i][header[Headers.TimeSlot.NbOperationLimit]]}");
             }
            

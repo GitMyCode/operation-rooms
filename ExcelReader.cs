@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.IO;
@@ -119,9 +121,14 @@ public class ExcelReader
         return sheet;
     }
 
+
+
     private void GetRow(XmlNode rowNode, DataTable sheet, XmlNamespaceManager nmsManager, ref int rowIndex)
     {
         XmlAttribute rowsRepeated = rowNode.Attributes["table:number-rows-repeated"];
+        if(IsEmptyRow(rowNode)){
+            return;
+        }
         if (rowsRepeated == null || Convert.ToInt32(rowsRepeated.Value, CultureInfo.InvariantCulture) == 1)
         {
             // while (sheet.Rows.Count < rowIndex)
@@ -150,6 +157,19 @@ public class ExcelReader
             sheet.Rows.Add(sheet.NewRow());
             sheet.Columns.Add();
         }
+    }
+
+    private bool IsEmptyRow(XmlNode rowNode)
+    {
+        var t = rowNode.ChildNodes.GetEnumerator().ToEnumeration();
+        foreach (XmlElement n in t)
+        {
+            if(!string.IsNullOrEmpty(n.InnerText)){
+                return false;   
+            }
+        }
+
+        return true;
     }
 
     private void GetCell(XmlNode cellNode, DataRow row, XmlNamespaceManager nmsManager, ref int cellIndex)
@@ -196,5 +216,16 @@ public class ExcelReader
             return String.IsNullOrEmpty(cell.InnerText) ? null : cell.InnerText;
         else
             return cellVal.Value;
+    }
+}
+
+public static class EnumerationExtentions
+{
+    public static IEnumerable ToEnumeration(this IEnumerator enumrator)
+    {
+        while (enumrator.MoveNext())
+        {
+            yield return enumrator.Current;
+        }
     }
 }
