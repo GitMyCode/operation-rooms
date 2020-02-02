@@ -10,13 +10,17 @@ using System.Globalization;
 
 namespace med_room
 {
-    public static class Headers{
-        public static class TimeSlot {
+    public static class Headers
+    {
+        public static class TimeSlot
+        {
             public const string Week = "Week";
 
             public const string NbPlages = "Nb_plages";
 
             public const string NbOperationLimit = "NbOperationLimit";
+
+            public const string WeekTimeLimit = "WeekTimeLimit";
         }
     }
     public class Program
@@ -71,7 +75,7 @@ namespace med_room
             var readFilePath = string.Empty;
             var writeFilePath = string.Empty;
 #if DEBUG
-            readFilePath = "OperationTimeSlot2.ods";
+            readFilePath = "OperationTimeSlot.ods";
 #else
             Console.WriteLine(@"Path du fichier a lire (ex: C:\Users\blabla\Desktop\Test.xlsx)");
             readFilePath = Console.ReadLine();
@@ -81,20 +85,16 @@ namespace med_room
 
 
             var fileInfo = new FileInfo(readFilePath);
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            var data = new ExcelReader().ReadOdsFile(fileInfo.FullName);
-            var table1 = data.Tables[0];
-            Console.WriteLine($"nb line {table1.Rows.Count}");
-            var header = ExcelHelper.GetExcelHeader(table1, 0);
-            table1.Rows.RemoveAt(0);
-            var rowsEnumerator = table1.Rows.GetEnumerator();
-            for(var i =0 ; i< table1.Rows.Count; i++){
-                Console.WriteLine($"{table1.Rows[i][header[Headers.TimeSlot.Week]]}, {table1.Rows[i][header[Headers.TimeSlot.NbPlages]]}, {table1.Rows[i][header[Headers.TimeSlot.NbOperationLimit]]}");
-            }
-           
 
-            //var operationList = GetOperations(fileInfo);
-            //             var weekList = GetWeeks(fileInfo);
+
+
+            var operationList = GetOperations(fileInfo);
+            var weekList = GetWeeks(fileInfo);
+
+            foreach (var week in weekList)
+            {
+                Console.WriteLine(week.ToString());
+            }
 
             //             var solver = new RoomSolver();
             //             var allFittedOperations = new List<OperationResult>();
@@ -136,7 +136,7 @@ namespace med_room
             //                 + $"\t Total ScoreOp: {allFittedOperations.Sum(x => x.ScoreOp)}");
 
             // #if !DEBUG
-            //             SaveResults(new FileInfo(writeFilePath), allFittedOperations);
+            //                         SaveResults(new FileInfo(writeFilePath), allFittedOperations);
             // #endif
             //             Console.Read();
         }
@@ -168,45 +168,42 @@ namespace med_room
             }
         }
 
+        private static List<Week> GetWeeks(FileInfo fileInfo)
+        {
+            var weeks = new List<Week>();
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            var data = new ExcelReader().ReadOdsFile(fileInfo.FullName);
+            var table1 = data.Tables[0];
 
+            Console.WriteLine($"nb line {table1.Rows.Count}");
+            var header = ExcelHelper.GetExcelHeader(table1, 0);
+            table1.Rows.RemoveAt(0);
+            var rowsEnumerator = table1.Rows.GetEnumerator();
+            for (var i = 0; i < table1.Rows.Count; i++)
+            {
+                var cell = table1.Rows[i];
+                var weekNumber = cell.GetCell<int>(() => header[Headers.TimeSlot.Week]);
+                var nbOperationLimit = cell.GetCell<int>(() => header[Headers.TimeSlot.NbOperationLimit], NbOperationLimitDefault);
+                var nbPlages = cell.GetCell<int>(() => header[Headers.TimeSlot.NbPlages]);
+                var availableTimeForWeek = cell.GetCell<int>(() => header[Headers.TimeSlot.WeekTimeLimit], TimeSlotDefault * nbPlages);
 
-        // private static List<Week> GetWeeks(FileInfo fileInfo)
-        // {
-        //     using (var package = new ExcelPackage(fileInfo))
-        //     {
-        //         var timeslotWorksheet = package.Workbook.Worksheets["TimeSlot"];
-        //         var header = ExcelHelper.GetExcelHeader(timeslotWorksheet, 1);
+                var availableTimePerSlot = availableTimeForWeek / nbPlages;
 
-        //         var list = new List<Week>();
-        //         for (var i = 2; i <= timeslotWorksheet.Dimension.Rows; i++)
-        //         {
-        //             var nbSlot = timeslotWorksheet.Cells[i, header["Nb_plages"]].GetValue<int>();
+                var timeSlot = Enumerable.Range(0, nbPlages).Select(x => new TimeSlot()
+                {
+                    RemainingTime = availableTimePerSlot
+                }).ToList();
 
-        //             // if there is no header for timelimit for a week then provie de default timeslot value
-        //             var availableTimeForWeek = header.ContainsKey("TimeLimit") ? timeslotWorksheet.Cells[i, header["TimeLimit"]].GetValue<int?>()?? TimeSlotDefault * nbSlot : TimeSlotDefault * nbSlot; 
+                weeks.Add(new Week()
+                {
+                    Number = weekNumber,
+                    NbOperationLimit = nbOperationLimit,
+                    TimeSlots = timeSlot
+                });
+            }
 
-        //             var nbOperationLimit = header.ContainsKey("NbOperationLimit") ? timeslotWorksheet.Cells[i, header["NbOperationLimit"]].GetValue<int?>() ?? NbOperationLimitDefault : NbOperationLimitDefault;
-
-
-        //             var availableTimePerSlot = availableTimeForWeek/nbSlot;
-        //             var timeSlot = Enumerable.Range(0, nbSlot).Select(
-        //                 x => new TimeSlot
-        //                 {
-        //                     RemainingTime = availableTimePerSlot
-        //                 }).ToList();
-
-        //             list.Add(
-        //                 new Week()
-        //                 {
-        //                     Number = timeslotWorksheet.Cells[i, header["Week"]].GetValue<int>(),
-        //                     TimeSlots = timeSlot,
-        //                     NbOperationLimit = nbOperationLimit
-        //                 });
-        //         }
-
-        //         return list;
-        //     }
-        // }
+            return weeks;
+        }
 
         // private static void SaveResults(FileInfo fileInfo, IList<OperationResult> results)
         // {
@@ -247,6 +244,15 @@ namespace med_room
         public IList<TimeSlot> TimeSlots { get; set; }
 
         public int NbOperationLimit { get; set; }
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Number: {this.Number}\tNbOperationLimit:{this.NbOperationLimit}");
+            sb.AppendLine($"\tTimeSlot:{string.Join(',', this.TimeSlots.Select(x => x.RemainingTime))}");
+
+            return sb.ToString();
+        }
     }
 
     public class TimeSlot
@@ -308,6 +314,33 @@ namespace med_room
 
 //         return header;
 //     }
+
+public static class DataHelper
+{
+
+    public static T GetCell<T>(this DataRow row, Func<int> getHeaderIndex, T defaultValue = default(T))
+    {
+        try
+        {
+            var index = getHeaderIndex();
+            return row[index].GetOrDefault<T>(defaultValue);
+
+        }
+        catch (KeyNotFoundException)
+        {
+            return defaultValue;
+        }
+    }
+    public static T GetOrDefault<T>(this object value, T defaultValue = default(T))
+    {
+        if (value == System.DBNull.Value)
+        {
+            return defaultValue;
+        }
+
+        return (T)Convert.ChangeType(value, typeof(T));
+    }
+}
 
 public static class ExcelHelper
 {
