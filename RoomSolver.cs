@@ -13,7 +13,7 @@ namespace med_room
 
         public decimal Result { get; set; }
 
-        public IList<Operation> SolveTimeSlot(IList<Operation> operations, int time)
+        public IList<Operation> SolveTimeSlot(IList<Operation> operations, int time, int nbOperationLimit)
         {
             var allLimit = operations.Select(x => x.LimitVar).Distinct();
             var allMemo = new List<decimal[,]>();
@@ -23,7 +23,7 @@ namespace med_room
             foreach (var limit in allLimit)
             {
                 var operationForLimit = operations.Where(x => x.LimitVar == limit).ToList();
-                var memo = this.PackIteratif(operationForLimit, operationForLimit.Count - 1, time);
+                var memo = this.PackIteratif(operationForLimit, operationForLimit.Count - 1, time, nbOperationLimit);
                 allMemo.Add(memo);
                 var result = memo[operationForLimit.Count - 1, time];
                 if (result > bestSoFar)
@@ -50,7 +50,7 @@ namespace med_room
             foreach (var weekTimeSlot in week.TimeSlots)
             {
                 var operationAvailable = operations.Where(x => selectedOperations.All(y => y.Id != x.Id)).ToList();
-                var timeSlotOperationBatch = this.SolveTimeSlot(operationAvailable, weekTimeSlot.RemainingTime);
+                var timeSlotOperationBatch = this.SolveTimeSlot(operationAvailable, weekTimeSlot.RemainingTime, week.NbOperationLimit);
                 selectedOperations.AddRange(timeSlotOperationBatch);
             }
 
@@ -65,7 +65,7 @@ namespace med_room
             }).ToList();
         }
 
-        public decimal[,] PackIteratif(IList<Operation> operations, int index, int timeRemaining)
+        public decimal[,] PackIteratif(IList<Operation> operations, int index, int timeRemaining, int nbOperationLimit)
         {
             var memo = new decimal[operations.Count + 1, timeRemaining + 1];
 
@@ -75,12 +75,14 @@ namespace med_room
                 {
                     if (operations[i - 1].Duree <= j)
                     {
-                        memo[i, j] = Math.Max(
-                            memo[i - 1, j],
-                            memo[i - 1, j - operations[i - 1].Duree] + operations[i - 1].ScoreOp);
+                        var lastScore = memo[i - 1, j];// for this opperation and this time
+                        var lastScoreWithTimeRemainingBeforeThisOperation = memo[i - 1, j - operations[i - 1].Duree];
+                        var nextScore = lastScoreWithTimeRemainingBeforeThisOperation + operations[i - 1].ScoreOp;
+                        memo[i, j] = Math.Max(lastScore, nextScore);
                     }
                     else
                     {
+                        // le score est le meme que pour le dernier puis qu'on ne peut pas inserer une autre operation
                         memo[i, j] = memo[i - 1, j];
                     }
                 }

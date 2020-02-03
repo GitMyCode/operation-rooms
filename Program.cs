@@ -100,59 +100,59 @@ namespace med_room
             var operationList = GetOperations(fileInfo);
             var weekList = GetWeeks(fileInfo);
 
+            // foreach (var week in weekList)
+            // {
+            //     Console.WriteLine(week.ToString());
+            // }
+
+            // Console.WriteLine("------Operation------");
+            // foreach(var opp in operationList){
+            //     Console.WriteLine(opp.ToString());
+            // }
+
+            var solver = new RoomSolver();
+            var allFittedOperations = new List<OperationResult>();
             foreach (var week in weekList)
             {
-                Console.WriteLine(week.ToString());
+                var subset = operationList
+                    .Where(x => x.SemaineDispo <= week.Number)
+                    .Where(x => allFittedOperations.All(y => y.Id != x.Id))
+                    .OrderByDescending(x => x.ScoreOp)
+                    .ThenBy(x => x.Duree).ToList();
+
+                var weekSelectedOperations = solver.Solve(week, subset);
+                Console.WriteLine($"-------------------------WEEK {week.Number}-------------------------------");
+                foreach (var selectedOperation in weekSelectedOperations)
+                {
+                    Console.WriteLine(
+                        $"Id: {selectedOperation.Id} "
+                        + $"\t Score_op: {selectedOperation.ScoreOp} "
+                        + $"\t Durée: {selectedOperation.Duree} "
+                        + $"\t Limite_VAR: {selectedOperation.LimitVar}");
+                }
+
+                Console.WriteLine(
+                    $"Nb fitted operation: {weekSelectedOperations.Count} "
+                    + $"\t Total hours: {(decimal)weekSelectedOperations.Sum(x => x.Duree) / 100}"
+                    + $"\t Total ScoreOp: {weekSelectedOperations.Sum(x => x.ScoreOp)}");
+
+                allFittedOperations.AddRange(weekSelectedOperations);
             }
 
-            Console.WriteLine("------Operation------");
-            foreach(var opp in operationList){
-                Console.WriteLine(opp.ToString());
-            }
+            Console.WriteLine($"--------------------------------------------------------");
+            Console.WriteLine($"--------------------------------------------------------");
+            Console.WriteLine($"------------------------END-----------------------------");
+            Console.WriteLine($"--------------------------------------------------------");
+            Console.WriteLine($"--------------------------------------------------------");
+            Console.WriteLine(
+                $"Nb fitted operation: {allFittedOperations.Count} "
+                + $"\t Total hours: {(decimal)allFittedOperations.Sum(x => x.Duree) / 100}"
+                + $"\t Total ScoreOp: {allFittedOperations.Sum(x => x.ScoreOp)}");
 
-            //             var solver = new RoomSolver();
-            //             var allFittedOperations = new List<OperationResult>();
-            //             foreach (var week in weekList)
-            //             {
-            //                 var subset = operationList
-            //                     .Where(x => x.SemaineDispo <= week.Number)
-            //                     .Where(x => allFittedOperations.All(y => y.Id != x.Id))
-            //                     .OrderByDescending(x => x.ScoreOp)
-            //                     .ThenBy(x => x.Duree).ToList();
-
-            //                 var weekSelectedOperations = solver.Solve(week, subset);
-            //                 Console.WriteLine($"-------------------------WEEK {week.Number}-------------------------------");
-            //                 foreach (var selectedOperation in weekSelectedOperations)
-            //                 {
-            //                     Console.WriteLine(
-            //                         $"Id: {selectedOperation.Id} "
-            //                         + $"\t Score_op: {selectedOperation.ScoreOp} "
-            //                         + $"\t Durée: {selectedOperation.Duree} "
-            //                         + $"\t Limite_VAR: {selectedOperation.LimitVar}");
-            //                 }
-
-            //                 Console.WriteLine(
-            //                     $"Nb fitted operation: {weekSelectedOperations.Count} "
-            //                     + $"\t Total hours: {(decimal)weekSelectedOperations.Sum(x => x.Duree) / 100}"
-            //                     + $"\t Total ScoreOp: {weekSelectedOperations.Sum(x => x.ScoreOp)}");
-
-            //                 allFittedOperations.AddRange(weekSelectedOperations);
-            //             }
-
-            //             Console.WriteLine($"--------------------------------------------------------");
-            //             Console.WriteLine($"--------------------------------------------------------");
-            //             Console.WriteLine($"------------------------END-----------------------------");
-            //             Console.WriteLine($"--------------------------------------------------------");
-            //             Console.WriteLine($"--------------------------------------------------------");
-            //             Console.WriteLine(
-            //                 $"Nb fitted operation: {allFittedOperations.Count} "
-            //                 + $"\t Total hours: {(decimal)allFittedOperations.Sum(x => x.Duree) / 100}"
-            //                 + $"\t Total ScoreOp: {allFittedOperations.Sum(x => x.ScoreOp)}");
-
-            // #if !DEBUG
-            //                         SaveResults(new FileInfo(writeFilePath), allFittedOperations);
-            // #endif
-            //             Console.Read();
+#if !DEBUG
+            SaveResults(new FileInfo(writeFilePath), allFittedOperations);
+#endif
+            Console.Read();
         }
 
         private static List<Operation> GetOperations(FileInfo fileInfo)
@@ -170,7 +170,7 @@ namespace med_room
                 var limitVar = operationDataRow.GetCell<string>(() => header[Headers.Opp.Limite_VAR]);
                 var scoreOp = operationDataRow.GetCell<decimal>(() => header[Headers.Opp.Score_op]);
                 var semaineDispo = operationDataRow.GetCell<int>(() => header[Headers.Opp.Sem_dispo_ajus]);
-                var duree = (int) (operationDataRow.GetCell<decimal>(() => header[Headers.Opp.Duree_salle_aj_inter]) * 100);
+                var duree = (int)(operationDataRow.GetCell<decimal>(() => header[Headers.Opp.Duree_salle_aj_inter]) * 100);
 
                 operations.Add(new Operation()
                 {
@@ -291,7 +291,8 @@ namespace med_room
 
         public int Duree { get; set; }
 
-        public override string ToString(){
+        public override string ToString()
+        {
             return $"{nameof(Id)}:{this.Id}, {nameof(LimitVar)}:{this.LimitVar}, {nameof(ScoreOp)}:{this.ScoreOp}, {nameof(SemaineDispo)}:{this.SemaineDispo}, {nameof(Duree)}:{this.Duree}";
         }
     }
