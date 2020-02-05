@@ -18,7 +18,7 @@ namespace med_room
 
             public const string NbPlages = "Nb_plages";
 
-            public const string NbOperationLimit = "NbOperationLimit";
+            public const string NbOperationLimitPerSlot = "NbOperationLimitPerSlot";
 
             public const string WeekTimeLimit = "WeekTimeLimit";
         }
@@ -200,7 +200,7 @@ namespace med_room
             {
                 var cell = weekTable.Rows[i];
                 var weekNumber = cell.GetCell<int>(() => header[Headers.TimeSlot.Week]);
-                var nbOperationLimit = cell.GetCell<int>(() => header[Headers.TimeSlot.NbOperationLimit], NbOperationLimitDefault);
+                var nbOperationLimit = cell.GetCell<int>(() => header[Headers.TimeSlot.NbOperationLimitPerSlot], NbOperationLimitDefault);
                 var nbPlages = cell.GetCell<int>(() => header[Headers.TimeSlot.NbPlages]);
                 var availableTimeForWeek = cell.GetCell<int>(() => header[Headers.TimeSlot.WeekTimeLimit], TimeSlotDefault * nbPlages);
 

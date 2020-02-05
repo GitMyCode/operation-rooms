@@ -44,24 +44,27 @@ namespace med_room
             var bestSoFar = 0.0m;
             decimal[,,] bestMemo = null;
             var limitForBestMemo = string.Empty;
+            var operationCountForBest = -1;
             foreach (var limit in allLimit)
             {
                 var operationForLimit = operations.Where(x => x.LimitVar == limit).ToList();
                 var memo = this.PackIteratif(operationForLimit, operationForLimit.Count - 1, time, nbOperationLimit);
                 allMemo.Add(memo);
                 var result = memo[operationForLimit.Count - 1, time, nbOperationLimit];
-                if (result > bestSoFar)
+                if (result >= bestSoFar)
                 {
                     bestSoFar = result;
                     bestMemo = memo;
                     limitForBestMemo = limit;
+                    operationCountForBest = operationForLimit.Count;
                 }
             }
 
-            var topTime = -1;
-            int topOperation, topOpLimit = -1;
+            int topTime = -1;
+            int topOperation = -1;
+            int topOpLimit = -1;
             var bestScore = 0.0m;
-            for (var i = 0; i <= operations.Count; i++)
+            for (var i = 0; i <= operationCountForBest; i++)
             {
                 for (var j = 0; j <= time; j++)
                 {
@@ -73,6 +76,8 @@ namespace med_room
                             topOperation = i;
                             topTime = j;
                             topOpLimit = op;
+
+                            bestScore = currentScore;
                         }
 
                     }
@@ -81,7 +86,7 @@ namespace med_room
 
             var list = new List<Operation>();
             var operationForSameLimit = operations.Where(x => x.LimitVar == limitForBestMemo).ToList();
-            this.RetriedFittedOperations(bestMemo, list, operationForSameLimit, topOpLimit, topTime, topOpLimit);
+            this.RetriedFittedOperations(bestMemo, list, operationForSameLimit, topOperation, topTime, topOpLimit);
 
             return list;
         }
@@ -145,7 +150,7 @@ namespace med_room
             }
             else
             {
-                this.RetriedFittedOperations(memo, retrievedOperations, allOperations, index - 1, time, nbOperationLimit - 1);
+                this.RetriedFittedOperations(memo, retrievedOperations, allOperations, index - 1, time, nbOperationLimit);
             }
         }
 
