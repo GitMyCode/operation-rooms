@@ -44,7 +44,7 @@ namespace med_room
             var bestSoFar = 0.0m;
             decimal[,,] bestMemo = null;
             var limitForBestMemo = string.Empty;
-            var operationCountForBest = -1;
+
             foreach (var limit in allLimit)
             {
                 var operationForLimit = operations.Where(x => x.LimitVar == limit).ToList();
@@ -56,37 +56,11 @@ namespace med_room
                     bestSoFar = result;
                     bestMemo = memo;
                     limitForBestMemo = limit;
-                    operationCountForBest = operationForLimit.Count;
                 }
             }
 
-            // int topTime = -1;
-            // int topOperation = -1;
-            // int topOpLimit = -1;
-            // var bestScore = 0.0m;
-            // for (var i = 0; i <= operationCountForBest; i++)
-            // {
-            //     for (var j = 0; j <= time; j++)
-            //     {
-            //         for (var op = 0; op <= nbOperationLimit; op++)
-            //         {
-            //             var currentScore = bestMemo[i, j, op];
-            //             if (currentScore > bestScore)
-            //             {
-            //                 topOperation = i;
-            //                 topTime = j;
-            //                 topOpLimit = op;
-
-            //                 bestScore = currentScore;
-            //             }
-
-            //         }
-            //     }
-            // }
-
             var list = new List<Operation>();
             var operationForSameLimit = operations.Where(x => x.LimitVar == limitForBestMemo).ToList();
-            //this.RetriedFittedOperations(bestMemo, list, operationForSameLimit, topOperation, topTime, topOpLimit);
             this.RetriedFittedOperations(bestMemo, list, operationForSameLimit, operationForSameLimit.Count, time, nbOperationLimit);
 
             return list;
@@ -95,7 +69,6 @@ namespace med_room
         public decimal[,,] PackIteratif(IList<Operation> operations, int index, int timeRemaining, int nbOperationLimit)
         {
             var memo = new decimal[operations.Count + 1, timeRemaining + 1, nbOperationLimit + 1];
-            var memoNbOpp = new int[operations.Count + 1, timeRemaining + 1];
 
             for (var i = 1; i <= operations.Count; i++)
             {
@@ -107,28 +80,14 @@ namespace med_room
                         {
                             // le score est le meme que pour le dernier puis qu'on ne peut pas inserer une autre operation
                             memo[i, j, op] = memo[i - 1, j, op];
-                            memoNbOpp[i, j] = op    ;
                         }
                         else
                         {
-                            // last quantity of operation fitted for the last max score
-                            var lastOperationQuantity = memoNbOpp[i - 1, j];
-                            if (lastOperationQuantity + 1 >= nbOperationLimit)
-                            {
-
-                            }
-
                             var lastScore = memo[i - 1, j, op]; // for this opperation and this time
                             var timeRemainingAfterThisOp = j - operations[i - 1].Duree;
-
-                            var operationExecutedBefeore = memoNbOpp[i - 1, timeRemainingAfterThisOp];
                             var lastScoreWithTimeRemainingBeforeThisOperation = memo[i - 1, timeRemainingAfterThisOp, op - 1];
-
                             var nextScore = lastScoreWithTimeRemainingBeforeThisOperation + operations[i - 1].ScoreOp;
-
-
                             memo[i, j, op] = Math.Max(lastScore, nextScore);
-                            memoNbOpp[i, j] = op + 1;
                         }
                     }
                 }
