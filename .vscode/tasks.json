@@ -51,7 +51,7 @@
                 "publish",
                 "${workspaceFolder}/operation-rooms.csproj",
                 "-r",
-                "osx-x64",
+                "win10-x64",
                 "-c",
                 "release",
                 "/p:PublishSingleFile=true",
