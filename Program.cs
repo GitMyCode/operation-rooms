@@ -222,36 +222,36 @@ namespace med_room
             return weeks;
         }
 
-        private static void SaveResults(FileInfo fileInfo, IList<OperationResult> results)
-        {
-            using (ExcelPackage package = new ExcelPackage(fileInfo))
-            {
-                GemBox.ExcelWorksheet worksheet = package.Workbook.Worksheets.Add("Result");
+        // private static void SaveResults(FileInfo fileInfo, IList<OperationResult> results)
+        // {
+        //     using (ExcelPackage package = new ExcelPackage(fileInfo))
+        //     {
+        //         GemBox.ExcelWorksheet worksheet = package.Workbook.Worksheets.Add("Result");
 
-                worksheet.Cells[1, 1].Value = "ID_instance";
-                worksheet.Cells[1, 2].Value = "WeekFitted";
-                worksheet.Cells[1, 3].Value = "Limite_VAR";
-                worksheet.Cells[1, 4].Value = "Score_op";
-                worksheet.Cells[1, 5].Value = "Sem_dispo_ajus";
-                worksheet.Cells[1, 6].Value = "Duree_salle_aj_inter";
-
-
-                for (int i = 0; i < results.Count; i++)
-                {
-                    var op = results[i];
-                    var row = i + 2;
-                    worksheet.Cells[row, 1].Value = op.Id;
-                    worksheet.Cells[row, 2].Value = op.WeekFitted;
-                    worksheet.Cells[row, 3].Value = op.LimitVar;
-                    worksheet.Cells[row, 4].Value = op.ScoreOp;
-                    worksheet.Cells[row, 5].Value = op.SemaineDispo;
-                    worksheet.Cells[row, 6].Value = op.Duree;
-                }
+        //         worksheet.Cells[1, 1].Value = "ID_instance";
+        //         worksheet.Cells[1, 2].Value = "WeekFitted";
+        //         worksheet.Cells[1, 3].Value = "Limite_VAR";
+        //         worksheet.Cells[1, 4].Value = "Score_op";
+        //         worksheet.Cells[1, 5].Value = "Sem_dispo_ajus";
+        //         worksheet.Cells[1, 6].Value = "Duree_salle_aj_inter";
 
 
-                package.Save();
-            }
-        }
+        //         for (int i = 0; i < results.Count; i++)
+        //         {
+        //             var op = results[i];
+        //             var row = i + 2;
+        //             worksheet.Cells[row, 1].Value = op.Id;
+        //             worksheet.Cells[row, 2].Value = op.WeekFitted;
+        //             worksheet.Cells[row, 3].Value = op.LimitVar;
+        //             worksheet.Cells[row, 4].Value = op.ScoreOp;
+        //             worksheet.Cells[row, 5].Value = op.SemaineDispo;
+        //             worksheet.Cells[row, 6].Value = op.Duree;
+        //         }
+
+
+        //         package.Save();
+        //     }
+        // }
     }
 
     public class Week
