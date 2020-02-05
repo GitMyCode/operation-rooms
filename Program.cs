@@ -7,6 +7,7 @@ using System.Text.Json;
 using OfficeOpenXml;
 using System.Data;
 using System.Globalization;
+using CsvHelper;
 
 namespace med_room
 {
@@ -18,7 +19,7 @@ namespace med_room
 
             public const string NbPlages = "Nb_plages";
 
-            public const string NbOperationLimit = "NbOperationLimit";
+            public const string NbOperationLimitPerSlot = "NbOperationLimitPerSlot";
 
             public const string WeekTimeLimit = "WeekTimeLimit";
         }
@@ -86,9 +87,9 @@ namespace med_room
 #if DEBUG
             readFilePath = "OperationTimeSlot.ods";
 #else
-            Console.WriteLine(@"Path du fichier a lire (ex: C:\Users\blabla\Desktop\Test.xlsx)");
+            Console.WriteLine(@"Path du fichier a lire .ODS (ex: C:\Users\blabla\Desktop\Test.ods)");
             readFilePath = Console.ReadLine();
-            Console.WriteLine(@"Path du fichier ou ecrire les resultats (ex: C:\Users\blabla\Desktop\resultat.xlsx)");
+            Console.WriteLine(@"Path du fichier ou ecrire les resultats .CSV (ex: C:\Users\blabla\Desktop\resultat.csv)");
             writeFilePath = Console.ReadLine();
 #endif
 
@@ -200,7 +201,7 @@ namespace med_room
             {
                 var cell = weekTable.Rows[i];
                 var weekNumber = cell.GetCell<int>(() => header[Headers.TimeSlot.Week]);
-                var nbOperationLimit = cell.GetCell<int>(() => header[Headers.TimeSlot.NbOperationLimit], NbOperationLimitDefault);
+                var nbOperationLimit = cell.GetCell<int>(() => header[Headers.TimeSlot.NbOperationLimitPerSlot], NbOperationLimitDefault);
                 var nbPlages = cell.GetCell<int>(() => header[Headers.TimeSlot.NbPlages]);
                 var availableTimeForWeek = cell.GetCell<int>(() => header[Headers.TimeSlot.WeekTimeLimit], TimeSlotDefault * nbPlages);
 
@@ -222,36 +223,38 @@ namespace med_room
             return weeks;
         }
 
-        // private static void SaveResults(FileInfo fileInfo, IList<OperationResult> results)
-        // {
-        //     using (ExcelPackage package = new ExcelPackage(fileInfo))
-        //     {
-        //         GemBox.ExcelWorksheet worksheet = package.Workbook.Worksheets.Add("Result");
+        private static void SaveResults(FileInfo fileInfo, IList<OperationResult> results)
+        {
+            using (var mem = new MemoryStream())
+            using (var writer = new StreamWriter(fileInfo.FullName))
+            using (var csvWriter = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            {
+                csvWriter.Configuration.Delimiter = ";";
+                
+                csvWriter.WriteField("ID_instance");
+                csvWriter.WriteField("WeekFitted");
+                csvWriter.WriteField("Limite_VAR");
+                csvWriter.WriteField("Score_op");
+                csvWriter.WriteField("Sem_dispo_ajus");
+                csvWriter.WriteField("Duree_salle_aj_inter");
+                csvWriter.NextRecord();
 
-        //         worksheet.Cells[1, 1].Value = "ID_instance";
-        //         worksheet.Cells[1, 2].Value = "WeekFitted";
-        //         worksheet.Cells[1, 3].Value = "Limite_VAR";
-        //         worksheet.Cells[1, 4].Value = "Score_op";
-        //         worksheet.Cells[1, 5].Value = "Sem_dispo_ajus";
-        //         worksheet.Cells[1, 6].Value = "Duree_salle_aj_inter";
+                foreach (var op in results)
+                {
+                    csvWriter.WriteField(op.Id);
+                    csvWriter.WriteField(op.WeekFitted);
+                    csvWriter.WriteField(op.LimitVar);
+                    csvWriter.WriteField(op.ScoreOp);
+                    csvWriter.WriteField(op.SemaineDispo);
+                    csvWriter.WriteField(op.Duree);
+                    csvWriter.NextRecord();
+                }
 
-
-        //         for (int i = 0; i < results.Count; i++)
-        //         {
-        //             var op = results[i];
-        //             var row = i + 2;
-        //             worksheet.Cells[row, 1].Value = op.Id;
-        //             worksheet.Cells[row, 2].Value = op.WeekFitted;
-        //             worksheet.Cells[row, 3].Value = op.LimitVar;
-        //             worksheet.Cells[row, 4].Value = op.ScoreOp;
-        //             worksheet.Cells[row, 5].Value = op.SemaineDispo;
-        //             worksheet.Cells[row, 6].Value = op.Duree;
-        //         }
-
-
-        //         package.Save();
-        //     }
-        // }
+                writer.Flush();
+                var result = Encoding.UTF8.GetString(mem.ToArray());
+                Console.WriteLine(result);
+            }
+        }
     }
 
     public class Week

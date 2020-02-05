@@ -13,34 +13,6 @@ namespace med_room
 
         public decimal Result { get; set; }
 
-        public IList<Operation> SolveTimeSlot(IList<Operation> operations, int time, int nbOperationLimit)
-        {
-            var allLimit = operations.Select(x => x.LimitVar).Distinct();
-            var allMemo = new List<decimal[,]>();
-            var bestSoFar = 0.0m;
-            decimal[,] bestMemo = null;
-            var limitForBestMemo = string.Empty;
-            foreach (var limit in allLimit)
-            {
-                var operationForLimit = operations.Where(x => x.LimitVar == limit).ToList();
-                var memo = this.PackIteratif(operationForLimit, operationForLimit.Count - 1, time, nbOperationLimit);
-                allMemo.Add(memo);
-                var result = memo[operationForLimit.Count - 1, time];
-                if (result > bestSoFar)
-                {
-                    bestSoFar = result;
-                    bestMemo = memo;
-                    limitForBestMemo = limit;
-                }
-            }
-
-            var list = new List<Operation>();
-            var operationForSameLimit = operations.Where(x => x.LimitVar == limitForBestMemo).ToList();
-            this.RetriedFittedOperations(bestMemo, list, operationForSameLimit, operationForSameLimit.Count, time);
-
-            return list;
-        }
-
         public IList<OperationResult> Solve(Week week, IList<Operation> operations)
         {
             //var ordered = this._operations
@@ -65,25 +37,58 @@ namespace med_room
             }).ToList();
         }
 
-        public decimal[,] PackIteratif(IList<Operation> operations, int index, int timeRemaining, int nbOperationLimit)
+        public IList<Operation> SolveTimeSlot(IList<Operation> operations, int time, int nbOperationLimit)
         {
-            var memo = new decimal[operations.Count + 1, timeRemaining + 1];
+            var allLimit = operations.Select(x => x.LimitVar).Distinct();
+            var allMemo = new List<decimal[,,]>();
+            var bestSoFar = 0.0m;
+            decimal[,,] bestMemo = null;
+            var limitForBestMemo = string.Empty;
+
+            foreach (var limit in allLimit)
+            {
+                var operationForLimit = operations.Where(x => x.LimitVar == limit).ToList();
+                var memo = this.PackIteratif(operationForLimit, operationForLimit.Count - 1, time, nbOperationLimit);
+                allMemo.Add(memo);
+                var result = memo[operationForLimit.Count - 1, time, nbOperationLimit];
+                if (result >= bestSoFar)
+                {
+                    bestSoFar = result;
+                    bestMemo = memo;
+                    limitForBestMemo = limit;
+                }
+            }
+
+            var list = new List<Operation>();
+            var operationForSameLimit = operations.Where(x => x.LimitVar == limitForBestMemo).ToList();
+            this.RetriedFittedOperations(bestMemo, list, operationForSameLimit, operationForSameLimit.Count, time, nbOperationLimit);
+
+            return list;
+        }
+
+        public decimal[,,] PackIteratif(IList<Operation> operations, int index, int timeRemaining, int nbOperationLimit)
+        {
+            var memo = new decimal[operations.Count + 1, timeRemaining + 1, nbOperationLimit + 1];
 
             for (var i = 1; i <= operations.Count; i++)
             {
                 for (var j = 0; j <= timeRemaining; j++)
                 {
-                    if (operations[i - 1].Duree <= j)
+                    for (var op = 0; op <= nbOperationLimit; op++)
                     {
-                        var lastScore = memo[i - 1, j];// for this opperation and this time
-                        var lastScoreWithTimeRemainingBeforeThisOperation = memo[i - 1, j - operations[i - 1].Duree];
-                        var nextScore = lastScoreWithTimeRemainingBeforeThisOperation + operations[i - 1].ScoreOp;
-                        memo[i, j] = Math.Max(lastScore, nextScore);
-                    }
-                    else
-                    {
-                        // le score est le meme que pour le dernier puis qu'on ne peut pas inserer une autre operation
-                        memo[i, j] = memo[i - 1, j];
+                        if (operations[i - 1].Duree > j || op < 1)
+                        {
+                            // le score est le meme que pour le dernier puis qu'on ne peut pas inserer une autre operation
+                            memo[i, j, op] = memo[i - 1, j, op];
+                        }
+                        else
+                        {
+                            var lastScore = memo[i - 1, j, op]; // for this opperation and this time
+                            var timeRemainingAfterThisOp = j - operations[i - 1].Duree;
+                            var lastScoreWithTimeRemainingBeforeThisOperation = memo[i - 1, timeRemainingAfterThisOp, op - 1];
+                            var nextScore = lastScoreWithTimeRemainingBeforeThisOperation + operations[i - 1].ScoreOp;
+                            memo[i, j, op] = Math.Max(lastScore, nextScore);
+                        }
                     }
                 }
             }
@@ -91,21 +96,21 @@ namespace med_room
             return memo;
         }
 
-        private void RetriedFittedOperations(decimal[,] memo, IList<Operation> retrievedOperations, IList<Operation> allOperations, int index, int time)
+        private void RetriedFittedOperations(decimal[,,] memo, IList<Operation> retrievedOperations, IList<Operation> allOperations, int index, int time, int nbOperationLimit)
         {
-            if (index == 0)
+            if (index == 0 || nbOperationLimit == 0)
             {
                 return;
             }
 
-            if (memo[index, time] > memo[index - 1, time])
+            if (memo[index, time, nbOperationLimit] > memo[index - 1, time, nbOperationLimit])
             {
                 retrievedOperations.Add(allOperations[index - 1]);
-                this.RetriedFittedOperations(memo, retrievedOperations, allOperations, index - 1, time - allOperations[index - 1].Duree);
+                this.RetriedFittedOperations(memo, retrievedOperations, allOperations, index - 1, time - allOperations[index - 1].Duree, nbOperationLimit - 1);
             }
             else
             {
-                this.RetriedFittedOperations(memo, retrievedOperations, allOperations, index - 1, time);
+                this.RetriedFittedOperations(memo, retrievedOperations, allOperations, index - 1, time, nbOperationLimit);
             }
         }
 
