@@ -13,8 +13,15 @@ jobs:
         dotnet-version: 3.1.101
     - name: Build with dotnet
       run: dotnet publish ./operation-rooms.csproj -r win10-x64 -c release /p:PublishSingleFile=true /p:PublishTrimmed=true /property:GenerateFullPaths=true
-    - uses: actions/upload-artifact@v1
+    - name: Copy file
+      uses: canastro/copy-action@0.0.2
       with:
-        name: nuget
-        path: ./artifacts
-      name: 'Upload Package'
+        # Source file
+        source: bin/release/netcoreapp3.1/win10-x64/publish/operation-rooms.exe
+        # Target file
+        target: ./artifacts/operation-rooms.exe
+   # - uses: actions/upload-artifact@v1
+   #   with:
+   #     name: nuget
+   #     path: ./artifacts
+   #   name: 'Upload Package'
