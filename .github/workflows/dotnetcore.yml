@@ -46,6 +46,11 @@ jobs:
         echo "CommitsSinceVersionSource: ${{ steps.gitversion.outputs.commitsSinceVersionSource }}"
         echo "CommitsSinceVersionSourcePadded: ${{ steps.gitversion.outputs.commitsSinceVersionSourcePadded }}"
         echo "CommitDate: ${{ steps.gitversion.outputs.commitDate }}"  
+        updateassemblyinfo
+    - name: Update AssemblyInfo
+      uses: gittools/actions/gitversion/execute@v0.9
+      with: 
+        updateassemblyinfo: true
     - uses: actions/setup-dotnet@v1  
       with:
         dotnet-version: 3.1.101
