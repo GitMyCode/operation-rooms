@@ -10,7 +10,7 @@ jobs:
       name: 'Checkout'
     - uses: actions/setup-dotnet@v1  
       with:
-        dotnet-version: 3.1.1
+        dotnet-version: 3.1.101
     - name: Build with dotnet
       run: dotnet publish ${github.workspace}/operation-rooms.csproj -r win10-x64 -c release /p:PublishSingleFile=true /p:PublishTrimmed=true /property:GenerateFullPaths=true
     - uses: actions/upload-artifact@v1
