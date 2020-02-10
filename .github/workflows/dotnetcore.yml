@@ -45,8 +45,7 @@ jobs:
         echo "VersionSourceSha: ${{ steps.gitversion.outputs.versionSourceSha }}"
         echo "CommitsSinceVersionSource: ${{ steps.gitversion.outputs.commitsSinceVersionSource }}"
         echo "CommitsSinceVersionSourcePadded: ${{ steps.gitversion.outputs.commitsSinceVersionSourcePadded }}"
-        echo "CommitDate: ${{ steps.gitversion.outputs.commitDate }}"  
-        updateassemblyinfo
+        echo "CommitDate: ${{ steps.gitversion.outputs.commitDate }}"
     - name: Update AssemblyInfo
       uses: gittools/actions/gitversion/execute@v0.9
       with: 
