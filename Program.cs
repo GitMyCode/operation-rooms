@@ -84,9 +84,9 @@ namespace med_room
         {
             var readFilePath = string.Empty;
             var writeFilePath = string.Empty;
-//#if DEBUG
+#if DEBUG
             readFilePath = "OperationTimeSlot.ods";
-//#else
+#else
             Console.WriteLine("---------------------Format---------------------");
             Console.WriteLine("First Worksheet Name: TimeSlot");
             Console.WriteLine($"\tHEADER: {Headers.TimeSlot.Week}, {Headers.TimeSlot.NbPlages}, {Headers.TimeSlot.NbOperationLimitPerSlot}, {Headers.TimeSlot.WeekTimeLimit}");
@@ -98,7 +98,7 @@ namespace med_room
             readFilePath = Console.ReadLine();
             Console.WriteLine(@"Path du fichier ou ecrire les resultats .CSV (ex: C:\Users\blabla\Desktop\resultat.csv)");
             writeFilePath = Console.ReadLine();
-//#endif
+#endif
 
 
             var fileInfo = new FileInfo(readFilePath);
