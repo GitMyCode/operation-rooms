@@ -8,11 +8,15 @@ using OfficeOpenXml;
 using System.Data;
 using System.Globalization;
 using CsvHelper;
+using System.Reflection;
+using System.Diagnostics;
 
 namespace med_room
 {
+
     public static class Headers
     {
+
         public static class TimeSlot
         {
             public const string Week = "Week";
@@ -35,6 +39,15 @@ namespace med_room
     }
     public class Program
     {
+        public static string Version
+        {
+            get
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                var fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
+                return fileVersionInfo.ProductVersion;
+            }
+        }
         public const int TimeSlotDefault = 800;
 
         public const int NbOperationLimitDefault = 10;
@@ -84,6 +97,7 @@ namespace med_room
         {
             var readFilePath = string.Empty;
             var writeFilePath = string.Empty;
+            Console.WriteLine($"ProgramVersion: {Version}");
 #if DEBUG
             readFilePath = "OperationTimeSlot.ods";
 #else
@@ -237,7 +251,7 @@ namespace med_room
             using (var csvWriter = new CsvWriter(writer, CultureInfo.InvariantCulture))
             {
                 csvWriter.Configuration.Delimiter = ";";
-                
+
                 csvWriter.WriteField("ID_instance");
                 csvWriter.WriteField("WeekFitted");
                 csvWriter.WriteField("Limite_VAR");
