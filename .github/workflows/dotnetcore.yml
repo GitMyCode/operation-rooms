@@ -60,7 +60,6 @@ jobs:
         target: ./artifacts/operation-rooms.exe
     - name: 'Upload package'  
       uses: actions/upload-artifact@v1
-       with:
-         name: nuget
-         path: ./bin/release/netcoreapp3.1/win10-x64/publish/operation-rooms.exe
-       name: 'Upload windows Package'
+      with:
+        name: nuget
+        path: ./bin/release/netcoreapp3.1/win10-x64/publish/operation-rooms.exe
