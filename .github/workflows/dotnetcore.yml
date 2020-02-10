@@ -3,6 +3,7 @@ name: .NET Core
 on: 
   push:
     branches:
+     - master
 
 jobs:
   build:
@@ -10,16 +11,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@master
-    - name: Cake Action
-      uses: ecampidoglio/cake-action@v1.1.1
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet   
       with:
-        # The path of the Cake script to run.
-        script-path: Build/build.cake
-        # The name of the task to execute. Note that this argument must be supported by the script.
-        #target: # optional
-        # The verbosity level with which to run the script. Valid values are: Quiet, Minimal, Normal, Verbose or Diagnostic.
-        #verbosity: # optional, default is Normal
-        # The version of Cake to install.
-        #cake-version: # optional
-        # Flag for if Cake modules should be installed/bootstrapped.
-        #cake-bootstrap: # optional, default is false
+        dotnet-version: 3.1.1
+    - name: Build with dotnet
+      run: dotnet publish ${github.workspace}/operation-rooms.csproj -r win10-x64 -c release /p:PublishSingleFile=true /p:PublishTrimmed=true /property:GenerateFullPaths=true
+    - uses: actions/upload-artifact@v1
+      with:
+        name: nuget
+        path: ${{ github.workspace }}/package
+      name: 'Upload Package'
