@@ -10,6 +10,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+    - name: Show variable
+      run: |
+        echo "token: ${{ secrets.GITHUB_TOKEN }}"
     - uses: actions/checkout@v1
       name: 'Checkout'
     - name: Install GitVersion
