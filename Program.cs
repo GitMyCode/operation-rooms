@@ -384,7 +384,7 @@ public static class DataHelper
             return defaultValue;
         }
 
-        return (T)Convert.ChangeType(value, typeof(T));
+        return (T)Convert.ChangeType(value, typeof(T), CultureInfo.InvariantCulture);
     }
 }
 
