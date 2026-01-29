@@ -45,9 +45,7 @@ namespace med_room
         {
             get
             {
-                var assembly = Assembly.GetExecutingAssembly();
-                var fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
-                return fileVersionInfo.ProductVersion;
+                return GetVersionString();
             }
         }
         public const int TimeSlotDefault = 800;
@@ -192,6 +190,43 @@ namespace med_room
             finally
             {
                 Log.CloseAndFlush();
+            }
+        }
+
+        private static string GetVersionString()
+        {
+            try
+            {
+                var processPath = Environment.ProcessPath;
+                if (!string.IsNullOrWhiteSpace(processPath))
+                {
+                    var fileVersionInfo = FileVersionInfo.GetVersionInfo(processPath);
+                    if (!string.IsNullOrWhiteSpace(fileVersionInfo.ProductVersion))
+                    {
+                        return fileVersionInfo.ProductVersion;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(fileVersionInfo.FileVersion))
+                    {
+                        return fileVersionInfo.FileVersion;
+                    }
+                }
+
+                var assembly = Assembly.GetExecutingAssembly();
+                var informationalVersion = assembly
+                    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                    ?.InformationalVersion;
+
+                if (!string.IsNullOrWhiteSpace(informationalVersion))
+                {
+                    return informationalVersion;
+                }
+
+                return assembly.GetName().Version?.ToString() ?? "unknown";
+            }
+            catch
+            {
+                return "unknown";
             }
         }
 
