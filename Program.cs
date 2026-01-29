@@ -4,12 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
-using OfficeOpenXml;
 using System.Data;
 using System.Globalization;
 using CsvHelper;
 using System.Reflection;
 using System.Diagnostics;
+using Serilog;
 
 namespace med_room
 {
@@ -39,6 +39,8 @@ namespace med_room
     }
     public class Program
     {
+        private const int LogFileSizeLimitBytes = 5 * 1024 * 1024;
+        private const int LogRetainedFileCountLimit = 5;
         public static string Version
         {
             get
@@ -95,23 +97,28 @@ namespace med_room
 
         static void Main(string[] args)
         {
+            ConfigureLogging();
             var readFilePath = string.Empty;
             var writeFilePath = string.Empty;
-            Console.WriteLine($"ProgramVersion: {Version}");
+            try
+            {
+                WriteLine($"ProgramVersion: {Version}");
 #if DEBUG
-            readFilePath = "OperationTimeSlot.ods";
+                readFilePath = "OperationTimeSlot.ods";
 #else
-            Console.WriteLine("---------------------Format---------------------");
-            Console.WriteLine("First Worksheet Name: TimeSlot");
-            Console.WriteLine($"\tHEADER: {Headers.TimeSlot.Week}, {Headers.TimeSlot.NbPlages}, {Headers.TimeSlot.NbOperationLimitPerSlot}, {Headers.TimeSlot.WeekTimeLimit}");
-             Console.WriteLine("Second Worksheet Name: Operation");
-            Console.WriteLine($"\tHEADER:{Headers.Opp.ID_instance}, {Headers.Opp.Limite_VAR}, {Headers.Opp.Score_op}, {Headers.Opp.Sem_dispo_ajus}, {Headers.Opp.Duree_salle_aj_inter}");
-            Console.WriteLine("------------------------------------------------");
-            
-            Console.WriteLine(@"Path du fichier a lire .ODS (ex: C:\Users\blabla\Desktop\Test.ods)");
-            readFilePath = Console.ReadLine();
-            Console.WriteLine(@"Path du fichier ou ecrire les resultats .CSV (ex: C:\Users\blabla\Desktop\resultat.csv)");
-            writeFilePath = Console.ReadLine();
+                WriteLine("---------------------Format---------------------");
+                WriteLine("First Worksheet Name: TimeSlot");
+                WriteLine($"\tHEADER: {Headers.TimeSlot.Week}, {Headers.TimeSlot.NbPlages}, {Headers.TimeSlot.NbOperationLimitPerSlot}, {Headers.TimeSlot.WeekTimeLimit}");
+                WriteLine("Second Worksheet Name: Operation");
+                WriteLine($"\tHEADER:{Headers.Opp.ID_instance}, {Headers.Opp.Limite_VAR}, {Headers.Opp.Score_op}, {Headers.Opp.Sem_dispo_ajus}, {Headers.Opp.Duree_salle_aj_inter}");
+                WriteLine("------------------------------------------------");
+                
+                WriteLine(@"Path du fichier a lire .ODS (ex: C:\Users\blabla\Desktop\Test.ods)");
+                readFilePath = Console.ReadLine();
+                WriteLine($"Input file path: {readFilePath}");
+                WriteLine(@"Path du fichier ou ecrire les resultats .CSV (ex: C:\Users\blabla\Desktop\resultat.csv)");
+                writeFilePath = Console.ReadLine();
+                WriteLine($"Output file path: {writeFilePath}");
 #endif
 
 
@@ -134,47 +141,110 @@ namespace med_room
 
             var solver = new RoomSolver();
             var allFittedOperations = new List<OperationResult>();
-            foreach (var week in weekList)
-            {
-                var subset = operationList
-                    .Where(x => x.SemaineDispo <= week.Number)
-                    .Where(x => allFittedOperations.All(y => y.Id != x.Id))
-                    .OrderByDescending(x => x.ScoreOp)
-                    .ThenBy(x => x.Duree).ToList();
-
-                var weekSelectedOperations = solver.Solve(week, subset);
-                Console.WriteLine($"-------------------------WEEK {week.Number}-------------------------------");
-                foreach (var selectedOperation in weekSelectedOperations)
+                foreach (var week in weekList)
                 {
-                    Console.WriteLine(
-                        $"Id: {selectedOperation.Id} "
-                        + $"\t Score_op: {selectedOperation.ScoreOp} "
-                        + $"\t Durée: {selectedOperation.Duree} "
-                        + $"\t Limite_VAR: {selectedOperation.LimitVar}");
+                    var subset = operationList
+                        .Where(x => x.SemaineDispo <= week.Number)
+                        .Where(x => allFittedOperations.All(y => y.Id != x.Id))
+                        .OrderByDescending(x => x.ScoreOp)
+                        .ThenBy(x => x.Duree).ToList();
+
+                    var weekSelectedOperations = solver.Solve(week, subset);
+                    WriteLine($"-------------------------WEEK {week.Number}-------------------------------");
+                    foreach (var selectedOperation in weekSelectedOperations)
+                    {
+                        WriteLine(
+                            $"Id: {selectedOperation.Id} "
+                            + $"\t Score_op: {selectedOperation.ScoreOp} "
+                            + $"\t Durée: {selectedOperation.Duree} "
+                            + $"\t Limite_VAR: {selectedOperation.LimitVar}");
+                    }
+
+                    WriteLine(
+                        $"Nb fitted operation: {weekSelectedOperations.Count} "
+                        + $"\t Total hours: {(decimal)weekSelectedOperations.Sum(x => x.Duree) / 100}"
+                        + $"\t Total ScoreOp: {weekSelectedOperations.Sum(x => x.ScoreOp)}");
+
+                    allFittedOperations.AddRange(weekSelectedOperations);
                 }
 
-                Console.WriteLine(
-                    $"Nb fitted operation: {weekSelectedOperations.Count} "
-                    + $"\t Total hours: {(decimal)weekSelectedOperations.Sum(x => x.Duree) / 100}"
-                    + $"\t Total ScoreOp: {weekSelectedOperations.Sum(x => x.ScoreOp)}");
-
-                allFittedOperations.AddRange(weekSelectedOperations);
-            }
-
-            Console.WriteLine($"--------------------------------------------------------");
-            Console.WriteLine($"--------------------------------------------------------");
-            Console.WriteLine($"------------------------END-----------------------------");
-            Console.WriteLine($"--------------------------------------------------------");
-            Console.WriteLine($"--------------------------------------------------------");
-            Console.WriteLine(
-                $"Nb fitted operation: {allFittedOperations.Count} "
-                + $"\t Total hours: {(decimal)allFittedOperations.Sum(x => x.Duree) / 100}"
-                + $"\t Total ScoreOp: {allFittedOperations.Sum(x => x.ScoreOp)}");
+                WriteLine($"--------------------------------------------------------");
+                WriteLine($"--------------------------------------------------------");
+                WriteLine($"------------------------END-----------------------------");
+                WriteLine($"--------------------------------------------------------");
+                WriteLine($"--------------------------------------------------------");
+                WriteLine(
+                    $"Nb fitted operation: {allFittedOperations.Count} "
+                    + $"\t Total hours: {(decimal)allFittedOperations.Sum(x => x.Duree) / 100}"
+                    + $"\t Total ScoreOp: {allFittedOperations.Sum(x => x.ScoreOp)}");
 
 #if !DEBUG
-            SaveResults(new FileInfo(writeFilePath), allFittedOperations);
+                SaveResults(new FileInfo(writeFilePath), allFittedOperations);
 #endif
-            Console.Read();
+                Console.Read();
+            }
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "Unhandled exception");
+                WriteLine("Unhandled exception. See log file for details.");
+                Environment.ExitCode = 1;
+            }
+            finally
+            {
+                Log.CloseAndFlush();
+            }
+        }
+
+        private static void ConfigureLogging()
+        {
+            var logFilePath = GetLogFilePath();
+            var logDirectory = Path.GetDirectoryName(logFilePath);
+            if (!string.IsNullOrWhiteSpace(logDirectory))
+            {
+                Directory.CreateDirectory(logDirectory);
+            }
+
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Information()
+                .WriteTo.File(
+                    path: logFilePath,
+                    rollingInterval: RollingInterval.Infinite,
+                    rollOnFileSizeLimit: true,
+                    fileSizeLimitBytes: LogFileSizeLimitBytes,
+                    retainedFileCountLimit: LogRetainedFileCountLimit,
+                    shared: true,
+                    flushToDiskInterval: TimeSpan.FromSeconds(1))
+                .CreateLogger();
+
+            Log.Information("Logging initialized. LogFile: {LogFile}", logFilePath);
+        }
+
+        private static string GetLogFilePath()
+        {
+            var processPath = Environment.ProcessPath;
+            if (!string.IsNullOrWhiteSpace(processPath))
+            {
+                var directory = Path.GetDirectoryName(processPath);
+                var baseName = Path.GetFileNameWithoutExtension(processPath);
+                if (!string.IsNullOrWhiteSpace(directory) && !string.IsNullOrWhiteSpace(baseName))
+                {
+                    return Path.Combine(directory, $"{baseName}.log");
+                }
+            }
+
+            var fallbackBaseName = Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
+            if (string.IsNullOrWhiteSpace(fallbackBaseName))
+            {
+                fallbackBaseName = "operation-rooms";
+            }
+
+            return Path.Combine(AppContext.BaseDirectory, $"{fallbackBaseName}.log");
+        }
+
+        private static void WriteLine(string message)
+        {
+            Console.WriteLine(message);
+            Log.Information(message);
         }
 
         private static List<Operation> GetOperations(FileInfo fileInfo)
@@ -214,7 +284,7 @@ namespace med_room
             var data = new ExcelReader().ReadOdsFile(fileInfo.FullName);
             var weekTable = data.Tables[0];
 
-            Console.WriteLine($"nb line {weekTable.Rows.Count}");
+            WriteLine($"nb line {weekTable.Rows.Count}");
             var header = ExcelHelper.GetExcelHeader(weekTable, 0);
             weekTable.Rows.RemoveAt(0);
             var rowsEnumerator = weekTable.Rows.GetEnumerator();
@@ -273,7 +343,7 @@ namespace med_room
 
                 writer.Flush();
                 var result = Encoding.UTF8.GetString(mem.ToArray());
-                Console.WriteLine(result);
+                WriteLine(result);
             }
         }
     }
