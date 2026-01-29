@@ -1,4 +1,4 @@
-name: .NET Core
+name: .NET
 
 on:
   push:
@@ -13,61 +13,29 @@ jobs:
     - name: Show variable
       run: |
         echo "token: ${{ secrets.GITHUB_TOKEN }}"
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v4
       name: 'Checkout'
     - name: Install GitVersion
-      uses: gittools/actions/gitversion/setup@v0.9
+      uses: gittools/actions/gitversion/setup@v3
       with:
-          versionSpec: '5.1.x'
+          versionSpec: '6.x'
     - name: Use GitVersion
       id: gitversion # step id used as reference for output values
-      uses: gittools/actions/gitversion/execute@v0.9
-    - run: |
-        echo "Major: ${{ steps.gitversion.outputs.major }}"
-        echo "Minor: ${{ steps.gitversion.outputs.minor }}"
-        echo "Patch: ${{ steps.gitversion.outputs.patch }}"
-        echo "PreReleaseTag: ${{ steps.gitversion.outputs.preReleaseTag }}"
-        echo "PreReleaseTagWithDash: ${{ steps.gitversion.outputs.preReleaseTagWithDash }}"
-        echo "PreReleaseLabel: ${{ steps.gitversion.outputs.preReleaseLabel }}"
-        echo "PreReleaseNumber: ${{ steps.gitversion.outputs.preReleaseNumber }}"
-        echo "WeightedPreReleaseNumber: ${{ steps.gitversion.outputs.weightedPreReleaseNumber }}"
-        echo "BuildMetaData: ${{ steps.gitversion.outputs.buildMetaData }}"
-        echo "BuildMetaDataPadded: ${{ steps.gitversion.outputs.buildMetaDataPadded }}"
-        echo "FullBuildMetaData: ${{ steps.gitversion.outputs.fullBuildMetaData }}"
-        echo "MajorMinorPatch: ${{ steps.gitversion.outputs.majorMinorPatch }}"
-        echo "SemVer: ${{ steps.gitversion.outputs.semVer }}"
-        echo "LegacySemVer: ${{ steps.gitversion.outputs.legacySemVer }}"
-        echo "LegacySemVerPadded: ${{ steps.gitversion.outputs.legacySemVerPadded }}"
-        echo "AssemblySemVer: ${{ steps.gitversion.outputs.assemblySemVer }}"
-        echo "AssemblySemFileVer: ${{ steps.gitversion.outputs.assemblySemFileVer }}"
-        echo "FullSemVer: ${{ steps.gitversion.outputs.fullSemVer }}"
-        echo "InformationalVersion: ${{ steps.gitversion.outputs.informationalVersion }}"
-        echo "BranchName: ${{ steps.gitversion.outputs.branchName }}"
-        echo "Sha: ${{ steps.gitversion.outputs.sha }}"
-        echo "ShortSha: ${{ steps.gitversion.outputs.shortSha }}"
-        echo "NuGetVersionV2: ${{ steps.gitversion.outputs.nuGetVersionV2 }}"
-        echo "NuGetVersion: ${{ steps.gitversion.outputs.nuGetVersion }}"
-        echo "NuGetPreReleaseTagV2: ${{ steps.gitversion.outputs.nuGetPreReleaseTagV2 }}"
-        echo "NuGetPreReleaseTag: ${{ steps.gitversion.outputs.nuGetPreReleaseTag }}"
-        echo "VersionSourceSha: ${{ steps.gitversion.outputs.versionSourceSha }}"
-        echo "CommitsSinceVersionSource: ${{ steps.gitversion.outputs.commitsSinceVersionSource }}"
-        echo "CommitsSinceVersionSourcePadded: ${{ steps.gitversion.outputs.commitsSinceVersionSourcePadded }}"
-        echo "CommitDate: ${{ steps.gitversion.outputs.commitDate }}"
-    - uses: actions/setup-dotnet@v1  
+      uses: gittools/actions/gitversion/execute@v3
+    - uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 3.1.101
-    - name: Build with dotnet
-      run: dotnet publish ./operation-rooms.csproj -r win10-x64 -c release /p:PublishSingleFile=true /p:PublishTrimmed=true /property:GenerateFullPaths=true
-    - name: Copy file
-      uses: canastro/copy-action@0.0.2
-      with:
-        # Source file
-        source: bin/release/netcoreapp3.1/win10-x64/publish/operation-rooms.exe
-        # Target file
-        target: ./operation-rooms.exe
-    - name: Build project # This would actually build your project, using zip for an example artifact
+        dotnet-version: 8.0.x
+    - name: Publish win-x64
+      run: dotnet publish ./operation-rooms.csproj -r win-x64 -c Release --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:EnableCompressionInSingleFile=true /property:GenerateFullPaths=true
+    - name: Publish osx-arm64
+      run: dotnet publish ./operation-rooms.csproj -r osx-arm64 -c Release --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:EnableCompressionInSingleFile=true /property:GenerateFullPaths=true
+    - name: Prepare artifacts
       run: |
-        zip --junk-paths -r package.zip ./operation-rooms.exe
+        cp bin/Release/net8.0/win-x64/publish/operation-rooms.exe ./operation-rooms-win-x64.exe
+        cp bin/Release/net8.0/osx-arm64/publish/operation-rooms ./operation-rooms-osx-arm64
+        chmod +x ./operation-rooms-osx-arm64
+        zip --junk-paths -r package-win-x64.zip ./operation-rooms-win-x64.exe
+        zip --junk-paths -r package-osx-arm64.zip ./operation-rooms-osx-arm64
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
@@ -78,15 +46,25 @@ jobs:
         release_name: Release ${{ steps.gitversion.outputs.fullSemVer }}
         draft: false
         prerelease: false
-    - name: Upload Release Asset
-      id: upload-release-asset 
+    - name: Upload Release Asset (win-x64)
+      id: upload-release-asset-win
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-        asset_path: ./package.zip
-        asset_name: package.zip
+        asset_path: ./package-win-x64.zip
+        asset_name: package-win-x64.zip
+        asset_content_type: application/zip
+    - name: Upload Release Asset (osx-arm64)
+      id: upload-release-asset-osx
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./package-osx-arm64.zip
+        asset_name: package-osx-arm64.zip
         asset_content_type: application/zip
         
         
